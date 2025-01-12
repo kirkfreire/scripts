@@ -1,0 +1,21 @@
+# Ejecutar el script como root sin interrupciones
+if [ "$EUID" -ne 0 ]; then
+  sudo "$0" "$@"
+  exit
+fi
+
+# Directorio donde se guardarán las capturas
+DIRECTORIO="/home/conexion/Imágenes"
+
+# Función para tomar una captura de pantalla
+tomar_captura() {
+    FECHA=$(date +%Y%m%d_%H%M%S)
+    ARCHIVO="${DIRECTORIO}/captura_${FECHA}.png"
+    scrot "$ARCHIVO"
+}
+
+# Bucle infinito para tomar capturas cada 30 segundos
+while true; do
+    tomar_captura
+    sleep 30
+done

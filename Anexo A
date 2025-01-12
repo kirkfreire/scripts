@@ -1,0 +1,249 @@
+# Copyright (c) 2022  Red Hat, Inc.
+#
+# This program es free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+VERSION="1.1"
+
+# Warning! Be sure to download the latest version of this script from its primary source:
+
+BULLETIN="https://access.redhat.com/security/vulnerabilities/RHSB-2022-002"
+
+# DO NOT blindly trust any internet sources and NEVER do `curl something | bash`!
+
+# This script is meant for simple detection of the vulnerability. Feel free to modify it for your
+# environment or needs. For more advanced detection, consider using Canonical's security tools.
+
+# Checking against the list of vulnerable packages is necessary because of the way how features
+# are back-ported to older versions of packages in various channels.
+
+VULNERABLE_VERSIONS_KERNEL=( 
+'5.8.0-25-generic' 
+'5.8.0-29-generic'
+'5.8.0-36-generic'
+'5.8.0-38-generic'
+'5.8.0-40-generic'
+'5.8.0-41-generic'
+'5.8.0-43-generic'
+'5.8.0-44-generic'
+'5.8.0-45-generic'
+'5.8.0-48-generic'
+'5.8.0-49-generic'
+'5.8.0-50-generic'
+'5.8.0-53-generic'
+'5.8.0-55-generic'
+'5.8.0-59-generic'
+'5.8.0-63-generic'
+'5.8.0-64-generic'
+'5.8.0-65-generic'
+'5.8.0-66-generic'
+'5.8.0-67-generic'
+'5.8.0-68-generic'
+'5.8.0-70-generic'
+'5.9.0-0-generic'
+'5.10.0-1-amd64'
+'5.10.0-2-amd64'
+'5.10.0-3-amd64'
+'5.10.0-4-amd64'
+'5.10.0-5-amd64'
+'5.10.0-6-amd64'
+'5.10.0-7-amd64'
+'5.10.0-8-amd64'
+'5.11.0-16-generic'
+'5.11.0-17-generic'
+'5.11.0-18-generic'
+'5.11.0-19-generic'
+'5.11.0-20-generic'
+'5.11.0-22-generic'
+'5.11.0-25-generic'
+'5.11.0-27-generic'
+'5.11.0-31-generic'
+'5.11.0-34-generic'
+'5.11.0-36-generic'
+'5.11.0-37-generic'
+'5.11.0-38-generic'
+'5.11.0-40-generic'
+'5.11.0-41-generic'
+'5.11.0-43-generic'
+'5.12.0-0-generic'
+'5.13.0-16-generic'
+'5.13.0-19-generic'
+'5.13.0-20-generic'
+'5.13.0-21-generic'
+'5.13.0-22-generic'
+'5.13.0-23-generic'
+'5.13.0-25-generic'
+'5.13.0-27-generic'
+'5.13.0-28-generic'
+'5.13.0-30-generic'
+'5.13.0-35-generic'
+'5.13.0-37-generic'
+'5.13.0-39-generic'
+'5.13.0-40-generic'
+'5.13.0-41-generic'
+'5.13.0-42-generic'
+'5.13.0-44-generic'
+'5.13.0-46-generic'
+'5.13.0-48-generic'
+'5.13.0-51-generic'
+'5.13.0-52-generic'
+'5.13.0-53-generic'
+'5.13.0-55-generic'
+'5.13.0-57-generic'
+'5.13.0-58-generic'
+'5.13.0-59-generic'
+'5.13.0-61-generic'
+'5.13.0-63-generic'
+'5.13.0-64-generic'
+'5.13.0-65-generic'
+'5.13.0-66-generic'
+'5.13.0-68-generic'
+'5.13.0-70-generic'
+'5.13.0-71-generic'
+'5.13.0-72-generic'
+'5.13.0-74-generic'
+'5.14.0-0-generic'
+'5.15.0-1-amd64'
+'5.15.0-2-amd64'
+'5.15.0-3-amd64'
+'5.15.0-4-amd64'
+'5.15.0-5-amd64'
+'5.16.0-1-amd64'
+'5.16.0-2-amd64'
+'5.16.0-3-amd64'
+'5.16.0-4-amd64'
+)
+
+KPATCH_MODULE_NAMES=()
+
+basic_args() {
+    local parameters=( "$@" )
+
+    RED="\\033[1;31m"
+    YELLOW="\\033[1;33m"
+    GREEN="\\033[1;32m"
+    BOLD="\\033[1m"
+    RESET="\\033[0m"
+    for parameter in "${parameters[@]}"; do
+        if [[ "$parameter" == "-h" || "$parameter" == "--help" ]]; then
+            echo "Usage: $( basename "$0" ) [-n | --no-colors] [-d | --debug]"
+            exit 1
+        elif [[ "$parameter" == "-n" || "$parameter" == "--no-colors" ]]; then
+            RED=""
+            YELLOW=""
+            GREEN=""
+            BOLD=""
+            RESET=""
+        elif [[ "$parameter" == "-d" || "$parameter" == "--debug" ]]; then
+            debug=true
+        fi
+    done
+}
+
+basic_reqs() {
+    local CVE="$1"
+
+    echo
+    echo -e "${BOLD}This script (v$VERSION) is primarily designed to detect $CVE on supported Ubuntu systems."
+    echo -e "Results may be inaccurate for other systems or kernels not compiled by Canonical.${RESET}"
+    echo
+
+    if ! command -v dpkg &> /dev/null; then
+        echo "'dpkg' command is required, but not installed. Exiting."
+        exit 1
+    fi
+}
+
+check_supported_kernel() {
+    local running_kernel="$1"
+
+    if [[ "$running_kernel" != *"generic"* && "$running_kernel" != *"amd64"* ]]; then
+        echo -e "${RED}This script is meant to be used only on Ubuntu systems.${RESET}"
+        echo
+        echo -e "Follow $BULLETIN for advice."
+        exit 1
+    fi
+}
+
+check_kernel() {
+    local running_kernel="$1"
+    shift
+    local vulnerable_versions=( "$@" )
+
+    for tested_kernel in "${vulnerable_versions[@]}"; do
+        if [[ "$running_kernel" == *"$tested_kernel"* ]]; then
+            echo "$running_kernel"
+            break
+        fi
+    done
+}
+
+check_kpatch() {
+    local kpatch_module_names=( "$@" )
+    local modules
+
+    modules=$( lsmod )
+
+    for tested_kpatch in "${kpatch_module_names[@]}"; do
+        if [[ "$modules" == *"$tested_kpatch"* ]]; then
+            echo "$tested_kpatch"
+            break
+        fi
+    done
+}
+
+set_default_values() {
+    result=0
+}
+
+parse_facts() {
+    :
+}
+
+draw_conclusions() {
+    kpatch_installed=$( check_kpatch "${KPATCH_MODULE_NAMES[@]}" )
+    vulnerable_kernel=$( check_kernel "$running_kernel" "${VULNERABLE_VERSIONS_KERNEL[@]}" )
+
+    if [[ ! "$kpatch_installed" && "$vulnerable_kernel" ]]; then
+        (( result |= 2 ))
+    fi
+}
+
+debug_print() {
+    variables=( running_kernel kpatch_installed vulnerable_kernel )
+    for variable in "${variables[@]}"; do
+        echo "$variable = *${!variable}*"
+    done
+    echo
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    basic_args "$@"
+    basic_reqs "CVE-2022-0847"
+    running_kernel=$( uname -r )
+    check_supported_kernel "$running_kernel"
+
+    set_default_values
+    parse_facts
+    draw_conclusions
+
+    if [[ "$debug" ]]; then
+        debug_print
+    fi
+
+    echo -e "This system is running kernel ${BOLD}${running_kernel}${RESET}"
+    if [[ "$kpatch_installed" ]]; then
+        echo -e "Detected kpatch: ${BOLD}${kpatch_installed}${RESET}"
+    fi
+    echo
+
+    if (( result != 0 )); then
+        echo -e "${RED}This system is affected by CVE-2022-0847.${RESET}"
+    else
+        echo -e "${GREEN}This system is NOT affected by CVE-2022-0847.${RESET}"
+    fi
+
+    exit "$result"
+fi

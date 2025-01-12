@@ -1,0 +1,35 @@
+# Nivel de consumo de hardware (0 a 100)
+CONSUMO_NIVEL=100  # Ajusta este valor según tus necesidades
+# Tiempo de ejecución en minutos
+TIEMPO_EJECUCION_MINUTOS=1  # Por ejemplo, 1 minuto
+# Convertir minutos a segundos
+TIEMPO_EJECUCION=$((TIEMPO_EJECUCION_MINUTOS * 60))
+
+# Función para simular la carga de trabajo
+simular_minado() {
+    TIEMPO_INICIO=$(date +%s)
+    echo "Minando criptomonedas"
+    while true; do
+        # Realizar un trabajo intensivo (por ejemplo, cálculos matemáticos)
+        for i in $(seq 1 1000); do
+            : $((i * i))
+        done
+
+        # Controlar el nivel de consumo de hardware mediante sleep
+        SLEEP_TIME=$(echo "scale=2; (100 - $CONSUMO_NIVEL) / 100" | bc)
+        sleep "$SLEEP_TIME"
+        
+        # Verificar si ha pasado el tiempo de ejecución deseado
+        TIEMPO_ACTUAL=$(date +%s)
+        if (( TIEMPO_ACTUAL - TIEMPO_INICIO >= TIEMPO_EJECUCION )); then
+            echo "Tiempo de minado de criptomonedas completado."
+            break
+        fi
+    done
+}
+
+# Mensaje inicial
+echo "Minado de criptomonedas con un nivel de consumo de hardware del $CONSUMO_NIVEL%"
+
+# Iniciar la simulación de minado
+simular_minado

